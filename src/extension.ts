@@ -75,7 +75,7 @@ async function openPick(item: SmartJumpPickItem): Promise<void> {
 export function activate(context: vscode.ExtensionContext): void {
   const disposable = vscode.commands.registerCommand('extension.smartJump', async () => {
     const quickPick = vscode.window.createQuickPick<SmartJumpPickItem>();
-    quickPick.placeholder = '输入模块路径，例如 python_notifier.notifier_manager._match_with_wildcard:74';
+    quickPick.placeholder = '输入模块路径，例如 app.services.user_service.get_user_by_id:42';
     quickPick.matchOnDescription = true;
     quickPick.matchOnDetail = true;
 

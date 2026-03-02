@@ -30,12 +30,12 @@ test('buildSearchPattern supports dotted module and file extension input', () =>
 });
 
 test('buildTargetCandidates returns symbol path and parent module path', () => {
-  const candidates = buildTargetCandidates('python_notifier.notifier_manager._match_with_wildcard');
+  const candidates = buildTargetCandidates('app.services.user_service.get_user_by_id');
   assert.deepEqual(
     candidates.map((item) => item.displayPath),
     [
-      'python_notifier/notifier_manager/_match_with_wildcard',
-      'python_notifier/notifier_manager'
+      'app/services/user_service/get_user_by_id',
+      'app/services/user_service'
     ]
   );
 });
