@@ -10,14 +10,19 @@ export interface TargetCandidate {
 }
 
 export function parseSmartJumpInput(input: string): ParsedInput | null {
-  const match = input.match(/^(.*?)(?::[\w.]+)?(?::(\d+))?$/);
-  const target = match?.[1]?.trim();
-  const lineStr = match?.[2];
-
-  if (!match || !target) {
+  const value = input.trim();
+  if (!value) {
     return null;
   }
 
+  const segments = value.split(':');
+  const target = (segments[0] ?? '').trim();
+  if (!target) {
+    return null;
+  }
+
+  const tail = (segments[segments.length - 1] ?? '').trim();
+  const lineStr = /^\d+$/.test(tail) ? tail : undefined;
   const line = Math.max(1, Number.parseInt(lineStr ?? '1', 10) || 1);
   return { target, line };
 }

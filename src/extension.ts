@@ -1,82 +1,136 @@
 import * as vscode from 'vscode';
-import { buildTargetCandidates, parseSmartJumpInput, toSafeLineIndex, type TargetCandidate } from './core';
+import { buildTargetCandidates, parseSmartJumpInput, toSafeLineIndex } from './core';
+
+type SmartJumpPickItem = vscode.QuickPickItem & {
+  uri: vscode.Uri;
+  line: number;
+};
+
+const MAX_RESULTS = 10;
+
+async function buildPickItems(input: string): Promise<{ items: SmartJumpPickItem[]; message?: string }> {
+  const parsed = parseSmartJumpInput(input);
+  if (!parsed) {
+    return { items: [], message: '输入模块路径，例如 a.b.c:ClassName:120' };
+  }
+
+  const exclude = '**/{node_modules,.git,dist,out,build}/**';
+  const candidates = buildTargetCandidates(parsed.target);
+  const items: SmartJumpPickItem[] = [];
+  const seen = new Set<string>();
+
+  for (const candidate of candidates) {
+    const matchedFiles = await vscode.workspace.findFiles(candidate.pattern, exclude, MAX_RESULTS);
+    for (const uri of matchedFiles) {
+      const key = uri.toString();
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      items.push({
+        label: vscode.workspace.asRelativePath(uri, false),
+        description: `匹配: ${candidate.displayPath}`,
+        detail: `跳转到第 ${parsed.line} 行`,
+        uri,
+        line: parsed.line
+      });
+
+      if (items.length >= MAX_RESULTS) {
+        break;
+      }
+    }
+
+    if (items.length >= MAX_RESULTS) {
+      break;
+    }
+  }
+
+  if (items.length === 0) {
+    const attempted = candidates.map((candidate) => candidate.displayPath).join(' / ');
+    return {
+      items: [],
+      message: `未找到目标文件。已尝试: ${attempted}`
+    };
+  }
+
+  return {
+    items,
+    message: `已找到 ${items.length} 个结果（最多显示 ${MAX_RESULTS} 个），回车打开`
+  };
+}
+
+async function openPick(item: SmartJumpPickItem): Promise<void> {
+  const document = await vscode.workspace.openTextDocument(item.uri);
+  const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+  const safeLine = toSafeLineIndex(item.line, document.lineCount);
+  const position = new vscode.Position(safeLine, 0);
+  const selection = new vscode.Selection(position, position);
+  editor.selection = selection;
+  editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   const disposable = vscode.commands.registerCommand('extension.smartJump', async () => {
-    try {
-      const input = await vscode.window.showInputBox({
-        prompt: '输入模块路径，例如 a.b.c:ClassName:120',
-        placeHolder: 'a.b.c[:Symbol][:Line]'
-      });
+    const quickPick = vscode.window.createQuickPick<SmartJumpPickItem>();
+    quickPick.placeholder = '输入模块路径，例如 python_notifier.notifier_manager._match_with_wildcard:74';
+    quickPick.matchOnDescription = true;
+    quickPick.matchOnDetail = true;
 
-      if (!input) {
-        return;
-      }
+    let disposed = false;
+    let requestId = 0;
 
-      const parsed = parseSmartJumpInput(input);
-      if (!parsed) {
-        vscode.window.showErrorMessage('输入格式不正确');
-        return;
-      }
+    const updateItems = async (value: string) => {
+      const currentRequestId = ++requestId;
+      quickPick.busy = true;
 
-      const exclude = '**/{node_modules,.git,dist,out,build}/**';
-      const candidates = buildTargetCandidates(parsed.target);
-      const candidateFiles = new Map<string, vscode.Uri[]>();
-      let resolvedCandidate: TargetCandidate | undefined;
-      let files: vscode.Uri[] = [];
-
-      for (const candidate of candidates) {
-        const matchedFiles = await vscode.workspace.findFiles(candidate.pattern, exclude, 50);
-        candidateFiles.set(candidate.rawTarget, matchedFiles);
-        if (!resolvedCandidate && matchedFiles.length > 0) {
-          resolvedCandidate = candidate;
-          files = matchedFiles;
-        }
-      }
-
-      if (files.length === 0) {
-        const attempted = candidates.map((candidate) => `- ${candidate.displayPath}`).join('\n');
-        vscode.window.showWarningMessage(`未找到目标文件: ${parsed.target.replace(/\./g, '/')}\n已尝试:\n${attempted}`);
-        return;
-      }
-
-      const fallbackCandidates = candidates.filter((candidate) => candidate.rawTarget !== parsed.target);
-      const availableFallbacks = fallbackCandidates.filter((candidate) => (candidateFiles.get(candidate.rawTarget) ?? []).length > 0);
-
-      if ((candidateFiles.get(parsed.target) ?? []).length === 0 && availableFallbacks.length > 0) {
-        const pickItems = availableFallbacks.map((candidate) => ({
-          label: candidate.displayPath,
-          description: `${(candidateFiles.get(candidate.rawTarget) ?? []).length} 个匹配`,
-          candidate
-        }));
-
-        const picked = await vscode.window.showQuickPick(pickItems, {
-          placeHolder: '未找到精确目标，选择可用路径'
-        });
-        if (!picked) {
+      try {
+        const { items, message } = await buildPickItems(value);
+        if (disposed || currentRequestId !== requestId) {
           return;
         }
 
-        resolvedCandidate = picked.candidate;
-        files = candidateFiles.get(picked.candidate.rawTarget) ?? [];
+        quickPick.items = items;
+        quickPick.activeItems = items.length > 0 ? [items[0]] : [];
+        quickPick.title = message;
+      } catch (error) {
+        if (disposed || currentRequestId !== requestId) {
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+        quickPick.title = `Smart Jump 执行失败: ${message}`;
+        quickPick.items = [];
+      } finally {
+        if (!disposed && currentRequestId === requestId) {
+          quickPick.busy = false;
+        }
+      }
+    };
+
+    quickPick.onDidChangeValue((value) => {
+      void updateItems(value);
+    });
+
+    quickPick.onDidAccept(() => {
+      const picked = quickPick.selectedItems[0] ?? quickPick.activeItems[0] ?? quickPick.items[0];
+      if (!picked) {
+        return;
       }
 
-      if (files.length > 1 && resolvedCandidate) {
-        vscode.window.setStatusBarMessage(`Smart Jump 命中多个文件，已打开第一个: ${resolvedCandidate.displayPath}`, 3000);
-      }
+      void openPick(picked);
+      quickPick.hide();
+    });
 
-      const document = await vscode.workspace.openTextDocument(files[0]);
-      const editor = await vscode.window.showTextDocument(document, { preview: false });
+    quickPick.onDidHide(() => {
+      disposed = true;
+      quickPick.dispose();
+    });
 
-      const safeLine = toSafeLineIndex(parsed.line, document.lineCount);
-      const position = new vscode.Position(safeLine, 0);
-      const selection = new vscode.Selection(position, position);
-      editor.selection = selection;
-      editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`Smart Jump 执行失败: ${message}`);
-    }
+    quickPick.show();
+    void updateItems('');
+
   });
 
   context.subscriptions.push(disposable);

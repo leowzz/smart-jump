@@ -16,6 +16,10 @@ test('parseSmartJumpInput parses explicit line and symbol', () => {
   assert.deepEqual(parseSmartJumpInput('a.b.c:ClassName:120'), { target: 'a.b.c', line: 120 });
 });
 
+test('parseSmartJumpInput supports in-progress value with trailing colon', () => {
+  assert.deepEqual(parseSmartJumpInput('a.b.c:'), { target: 'a.b.c', line: 1 });
+});
+
 test('parseSmartJumpInput rejects empty input target', () => {
   assert.equal(parseSmartJumpInput(''), null);
 });
