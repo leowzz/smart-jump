@@ -1,7 +1,7 @@
 {
   "name": "smart-jump",
   "displayName": "Smart Jump",
-  "description": "Jump to Python files by dotted path and optional line number.",
+  "description": "Jump to code locations copied from JetBrains IDEs with optional line numbers.",
   "version": "0.1.0",
   "publisher": "leowzz",
   "license": "MIT",
