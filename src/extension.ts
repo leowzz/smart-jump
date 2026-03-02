@@ -11,7 +11,7 @@ const MAX_RESULTS = 10;
 async function buildPickItems(input: string): Promise<{ items: SmartJumpPickItem[]; message?: string }> {
   const parsed = parseSmartJumpInput(input);
   if (!parsed) {
-    return { items: [], message: '输入模块路径，例如 a.b.c:ClassName:120' };
+    return { items: [], message: '输入路径快速跳转' };
   }
 
   const exclude = '**/{node_modules,.git,dist,out,build}/**';
@@ -32,6 +32,7 @@ async function buildPickItems(input: string): Promise<{ items: SmartJumpPickItem
         label: vscode.workspace.asRelativePath(uri, false),
         description: `匹配: ${candidate.displayPath}`,
         detail: `跳转到第 ${parsed.line} 行`,
+        alwaysShow: true,
         uri,
         line: parsed.line
       });
@@ -56,7 +57,7 @@ async function buildPickItems(input: string): Promise<{ items: SmartJumpPickItem
 
   return {
     items,
-    message: `已找到 ${items.length} 个结果（最多显示 ${MAX_RESULTS} 个），回车打开`
+    message: `已找到 ${items.length} 个结果，回车打开`
   };
 }
 
