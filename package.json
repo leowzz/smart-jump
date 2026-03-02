@@ -15,9 +15,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:extension.smartJump"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
