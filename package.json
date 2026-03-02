@@ -3,7 +3,7 @@
   "displayName": "Smart Jump",
   "description": "Jump to Python files by dotted path and optional line number.",
   "version": "0.1.0",
-  "publisher": "leo",
+  "publisher": "leowzz",
   "license": "MIT",
   "repository": {
     "type": "git",
