@@ -1,0 +1,56 @@
+{
+  "name": "smart-jump",
+  "displayName": "Smart Jump",
+  "description": "Jump to Python files by dotted path and optional line number.",
+  "version": "0.0.1",
+  "publisher": "leo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leowzz/smart-jump.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:extension.smartJump"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.smartJump",
+        "title": "Smart Jump: Go To Python Symbol",
+        "category": "Navigation"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "extension.smartJump",
+        "key": "ctrl+alt+j",
+        "mac": "cmd+alt+j",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "build": "npm run compile && npx vsce package",
+    "watch": "tsc -watch -p ./",
+    "test:unit": "npm run compile && node --test test/unit/*.test.js",
+    "test:integration": "npm run compile && node ./test/integration/runTest.js",
+    "test": "npm run test:unit && npm run test:integration"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "18.x",
+    "typescript": "^5.4.0",
+    "@vscode/vsce": "^3.7.0",
+    "@vscode/test-electron": "^2.5.2",
+    "mocha": "^10.8.2"
+  }
+}

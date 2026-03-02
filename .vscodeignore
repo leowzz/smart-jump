@@ -1,0 +1,9 @@
+.vscode/**
+src/**
+test/**
+.git/**
+.gitignore
+node_modules/**
+pnpm-lock.yaml
+**/*.ts
+**/*.map
