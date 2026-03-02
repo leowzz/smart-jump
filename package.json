@@ -2,7 +2,7 @@
   "name": "smart-jump",
   "displayName": "Smart Jump",
   "description": "Jump to Python files by dotted path and optional line number.",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "publisher": "leo",
   "license": "MIT",
   "repository": {
@@ -23,7 +23,7 @@
     "commands": [
       {
         "command": "extension.smartJump",
-        "title": "Smart Jump: Go To Python Symbol",
+        "title": "Smart Jump: Go To Code Location",
         "category": "Navigation"
       }
     ],
